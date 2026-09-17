@@ -1,0 +1,52 @@
+# Concrete Structural Damage Inspection System
+#
+#   docker compose up --build
+#   dashboard → http://localhost:5173
+#   API docs  → http://localhost:8000/docs
+#
+# Models are mounted read-only from ./models. Retraining a model and restarting
+# the api service is enough to deploy it — no rebuild, because the *_meta.json
+# files carry the thresholds and preprocessing constants.
+
+services:
+  api:
+    build:
+      context: ./src
+      dockerfile: Dockerfile.backend
+    image: concrete-inspection-api:1.0.0
+    container_name: inspection-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./models:/data/models:ro
+      - ./reports:/data/reports
+    environment:
+      PROJECT_ROOT: /data
+      MODELS_DIR: /data/models
+      REPORTS_DIR: /data/reports
+      ALLOWED_ORIGINS: "http://localhost:5173,http://localhost"
+      ORGANISATION: "Structural Inspection Unit"
+      MAX_UPLOAD_MB: "25"
+      REPORT_TTL_HOURS: "24"
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  web:
+    build:
+      context: ./src
+      dockerfile: Dockerfile.frontend
+    image: concrete-inspection-web:1.0.0
+    container_name: inspection-web
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      api:
+        condition: service_healthy

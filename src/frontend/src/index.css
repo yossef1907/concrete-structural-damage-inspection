@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+  }
+  /* Measurements are read in columns; tabular figures keep them aligned. */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+  /* Keyboard focus must stay visible — inspectors work gloved, on tablets,
+     and sometimes entirely by keyboard on a laptop in a vehicle. */
+  :focus-visible {
+    outline: 2px solid #1c1917;
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

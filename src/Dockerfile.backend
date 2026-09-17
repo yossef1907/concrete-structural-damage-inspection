@@ -1,0 +1,44 @@
+# Concrete Structural Damage Inspection — API
+# Built for the zero-drift contract: model weights are MOUNTED, never baked in,
+# so retraining does not require an image rebuild.
+FROM nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        python3.11 python3-pip python3.11-dev \
+        libgl1 libglib2.0-0 libsm6 libxext6 libxrender1 curl \
+    && ln -sf /usr/bin/python3.11 /usr/bin/python \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Dependencies first — this layer caches across source changes.
+COPY backend/requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r /app/requirements.txt
+
+# Application source. engine/ must sit beside backend/ so `from engine.severity
+# import ...` resolves.
+COPY engine/ /app/engine/
+COPY backend/ /app/backend/
+
+# Models and reports arrive as volumes at runtime (see docker-compose.yml).
+ENV PROJECT_ROOT=/data \
+    MODELS_DIR=/data/models \
+    REPORTS_DIR=/data/reports \
+    PYTHONPATH=/app
+
+RUN useradd -m -u 1000 inspector && mkdir -p /data/reports \
+    && chown -R inspector:inspector /app /data
+USER inspector
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=45s --retries=3 \
+    CMD curl -fsS http://localhost:8000/health || exit 1
+
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000", \
+     "--workers", "1", "--timeout-keep-alive", "65"]

@@ -1,0 +1,17 @@
+# The raw dataset is 55,348 images — never send it to the build daemon.
+data/
+data_processed/
+notebooks/
+audit_results/
+reports/
+models/
+**/__pycache__/
+**/*.pyc
+**/.ipynb_checkpoints/
+**/node_modules/
+**/dist/
+.git/
+.venv/
+*.pt
+*.pth
+*.onnx
